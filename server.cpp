@@ -16,7 +16,7 @@ private:
 public:
     void init(int port){
         listenPort = port;
-        epollObj = epoll_create(1024*16);
+        epollObj = epoll_create(1024);
         
         listenFd = createListenFd();
         if (listenFd < 0){
@@ -64,7 +64,19 @@ public:
     
     void start(){
         // work loop
-        
+        struct epoll_event events;
+        while (true){
+            int fdAmount = epoll_wait(epollObj, events, 1024, -1);
+            for (int i=0; i<fdAmount; i++){
+                if (events[i].data.fd == listenFd){
+                    if (events[i].events & EPOLLIN){
+                        struct sockaddr_in client;
+                        int serviceFd = accept(listenFd, &client, &sizeof(client));
+                        
+                    }
+                }
+            }
+        }
     }
 };
 
