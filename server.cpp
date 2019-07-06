@@ -1,14 +1,44 @@
 #include <iostream>
 #include <string.h>
 #include <unistd.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 
+#include <pthread.h>
+
 
 using namespace std;
+
+
+void* routine(void *cmd){
+    char *ret = new char[1024];
+    memset(ret, 0, 1024);
+    FILE *p = popen((char *)cmd, "r");
+    if (!p){
+        pclose(p);
+        pthread_exit((void*)"System: exec cmd failed!...");
+    }
+    int count = 0;
+    while (true){
+        char output[128] = {0,};
+        if ( fgets(output, 128, p) == NULL ){
+            break;
+        }
+        
+        int len = strlen(output);
+        if (count+len >= 1024)
+            break;
+        
+        strncpy(ret+count, output, len);
+        count += len;
+    }
+    pclose(p);
+    pthread_exit((void*)ret);
+}
 
 class Server{
 private:
@@ -21,6 +51,20 @@ private:
         int nread = read(fd, buffer, 1024);
         if (nread > 0){
             cout<<"Data Received: "<<buffer<<endl;
+            pthread_t t1;
+            char *ret_msg;
+            int err = pthread_create(&t1, NULL, routine, (void*)(buffer));
+            if (err != 0){
+                std::cerr<<"create thread failed! errno="<<err<<endl;
+            }
+            
+            err = pthread_join(t1, (void **)&ret_msg);
+            
+            if (err != 0){
+                std::cerr<<"pthread jion failed! errno="<<err<<endl;
+            }
+            write(fd, (char*)ret_msg, strlen(ret_msg));
+            delete[] ret_msg;
             return nread;
         }else if (nread == 0){
             close(fd);

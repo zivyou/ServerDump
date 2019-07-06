@@ -32,7 +32,10 @@ int main(){
         string s;
         if (getline(cin, s)){
             int n = send(client, s.c_str(), s.length(), 0);
-            cout<<"Data send: "<<n<<s<<endl;
+            cout<<"Data send: "<<s<<endl;
+            char recv_buf[1024];
+            int rn = recv(client, recv_buf, 1024, 0);
+            cout<<"Response: "<<recv_buf<<endl;
         }else
             break;
     }
